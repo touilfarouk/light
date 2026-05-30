@@ -1,12 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Light Sender PRO</title>
+  <style>
+    body {
+      text-align: center;
+      background: black;
+      color: white;
+      font-family: Arial;
+    }
+    input, button {
+      padding: 10px;
+      margin: 10px;
+    }
+    #flash {
+      width: 150px;
+      height: 150px;
+      margin: 20px auto;
+      background: black;
+      border: 2px solid white;
+    }
+  </style>
+</head>
+<body>
+
+<h2>💡 Light Sender</h2>
+
+<input id="text" placeholder="Enter message">
+<br>
+<button onclick="initTorch()">Initialize Flashlight</button>
+<button onclick="send()">Send</button>
+
+<p id="status">Click Initialize first</p>
+
+<div id="flash"></div>
+
 <script>
+let torchTrack = null;
+
 function textToBinary(text) {
   return text.split('').map(c =>
     c.charCodeAt(0).toString(2).padStart(8,'0')
   ).join('');
 }
-
-let torchTrack = null;
-let streamRef = null;
 
 async function initTorch() {
   try {
@@ -14,47 +50,46 @@ async function initTorch() {
       video: { facingMode: { ideal: "environment" } }
     });
 
-    streamRef = stream;
     torchTrack = stream.getVideoTracks()[0];
 
-    const capabilities = torchTrack.getCapabilities();
+    const cap = torchTrack.getCapabilities();
 
-    if (!capabilities.torch) {
-      document.getElementById("status").innerText = "❌ Torch not supported on this device";
-      return;
+    if (cap.torch) {
+      document.getElementById("status").innerText = "✅ Torch ready";
+    } else {
+      document.getElementById("status").innerText = "⚠️ Torch not supported (using screen)";
     }
 
-    document.getElementById("status").innerText = "✅ Flashlight ready!";
   } catch (e) {
-    console.log(e);
-    document.getElementById("status").innerText = "❌ Camera access failed";
+    document.getElementById("status").innerText = "❌ Camera error";
   }
 }
 
 async function send() {
   let text = document.getElementById("text").value;
-  let binary = textToBinary(text);
-
-  if (!torchTrack) {
-    alert('Initialize flashlight first!');
-    return;
-  }
+  let binary = "11111111" + textToBinary(text); // start signal
 
   for (let bit of binary) {
     await flash(bit === "1");
-    await sleep(200);
+    await sleep(250);
   }
 
   await flash(false);
 }
 
 async function flash(on) {
+  // Visual box
+  document.getElementById("flash").style.background = on ? "white" : "black";
+
+  // Try torch
   try {
     await torchTrack.applyConstraints({
       advanced: [{ torch: on }]
     });
   } catch (e) {
-    console.log("Torch error:", e);
+    // fallback
+    document.body.style.background = on ? "white" : "black";
+    document.body.style.color = on ? "black" : "white";
   }
 }
 
@@ -62,3 +97,6 @@ function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
 </script>
+
+</body>
+</html>

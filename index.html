@@ -1,86 +1,66 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Light Receiver back</title>
+  <title>Light Receiver PRO</title>
 </head>
 <body>
 
 <h2>📷 Light Receiver</h2>
-<button onclick="clearOutput()">Clear</button>
-<video id="video" autoplay></video>
+<video id="video" autoplay playsinline width="300"></video>
 <p id="output">Waiting...</p>
 
 <script>
 let video = document.getElementById("video");
 let output = document.getElementById("output");
 
-navigator.mediaDevices.enumerateDevices().then(devices => {
-  const backCamera = devices.find(device => 
-    device.kind === 'videoinput' && device.label.toLowerCase().includes('back')
-  );
-  const cameraConstraints = backCamera
-    ? { video: { deviceId: { exact: backCamera.deviceId } } }
-    : { video: { facingMode: { ideal: 'environment' } } };
-  return navigator.mediaDevices.getUserMedia(cameraConstraints);
-}).then(stream => video.srcObject = stream)
-.catch(error => {
-  console.log('Camera error:', error);
-  navigator.mediaDevices.getUserMedia({ video: true })
-    .then(stream => video.srcObject = stream);
-});
+navigator.mediaDevices.getUserMedia({
+  video: { facingMode: "environment" }
+})
+.then(stream => video.srcObject = stream);
 
 let canvas = document.createElement("canvas");
 let ctx = canvas.getContext("2d");
 
-let data = "";
-let lastBrightness = 0;
-
-function clearOutput() {
-  output.innerText = "Waiting...";
-  data = "";
-}
+let buffer = "";
+let started = false;
 
 setInterval(() => {
-  if (video.videoWidth === 0) return; // Wait for video to load
-  
+  if (!video.videoWidth) return;
+
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
+
   ctx.drawImage(video, 0, 0);
 
   let frame = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
 
   let brightness = 0;
   for (let i = 0; i < frame.length; i += 4) {
-    brightness += frame[i]; // red channel
+    brightness += frame[i];
   }
-
   brightness /= (frame.length / 4);
 
-  // Only detect significant changes in brightness
-  if (Math.abs(brightness - lastBrightness) > 30) {
-    if (brightness > 120) {
-      data += "1";
-    } else if (brightness < 80) {
-      data += "0";
-    }
-  }
-  
-  lastBrightness = brightness;
+  let bit = brightness > 100 ? "1" : "0";
 
-  // every 8 bits → convert to char
-  if (data.length >= 8) {
-    let byte = data.slice(0, 8);
-    data = data.slice(8);
+  buffer += bit;
+
+  // detect start signal
+  if (!started && buffer.includes("11111111")) {
+    started = true;
+    buffer = "";
+    output.innerText = "Receiving: ";
+    return;
+  }
+
+  if (started && buffer.length >= 8) {
+    let byte = buffer.slice(0, 8);
+    buffer = buffer.slice(8);
 
     let char = String.fromCharCode(parseInt(byte, 2));
-    if (output.innerText === "Waiting...") {
-      output.innerText = char;
-    } else {
-      output.innerText += char;
-    }
+    output.innerText += char;
   }
 
-}, 200);
+}, 250);
 </script>
 
 </body>
