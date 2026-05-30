@@ -20,9 +20,11 @@
 </head>
 <body>
 
-<h2>💡 Light Sender</h2>
+<h2>💡 Light Sender (Flashlight)</h2>
 <input id="text" placeholder="Enter message">
+<button onclick="initTorch()">Initialize Flashlight</button>
 <button onclick="send()">Send</button>
+<p id="status">Click "Initialize Flashlight" first</p>
 
 <div id="flash"></div>
 
@@ -33,22 +35,53 @@ function textToBinary(text) {
   ).join('');
 }
 
-async function send() {
-  let text = document.getElementById("text").value;
-  let binary = textToBinary(text);
+let torchTrack = null;
 
-  for (let bit of binary) {
-    if (bit === "1") {
-      flash(true);
-    } else {
-      flash(false);
-    }
-    await sleep(200);
+async function initTorch() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', torch: true }
+    });
+    torchTrack = stream.getVideoTracks()[0];
+    stream.getTracks().forEach(track => track.stop());
+    return true;
+  } catch (e) {
+    console.log('Torch not available:', e);
+    return false;
   }
 }
 
-function flash(on) {
-  document.getElementById("flash").style.background = on ? "white" : "black";
+async function send() {
+  let text = document.getElementById("text").value;
+  let binary = textToBinary(text);
+  
+  if (!torchTrack) {
+    alert('Please initialize torch first. Click "Initialize Flashlight"');
+    return;
+  }
+
+  for (let bit of binary) {
+    if (bit === "1") {
+      await flash(true);
+    } else {
+      await flash(false);
+    }
+    await sleep(200);
+  }
+  await flash(false); // Turn off after sending
+}
+
+async function flash(on) {
+  try {
+    const capabilities = torchTrack.getCapabilities();
+    if (capabilities.torch) {
+      await torchTrack.applyConstraints({
+        advanced: [{ torch: on }]
+      });
+    }
+  } catch (e) {
+    console.log('Torch error:', e);
+  }
 }
 
 function sleep(ms) {
