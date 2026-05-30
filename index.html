@@ -13,7 +13,7 @@
 let video = document.getElementById("video");
 let output = document.getElementById("output");
 
-navigator.mediaDevices.getUserMedia({ video: true })
+navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
   .then(stream => video.srcObject = stream);
 
 let canvas = document.createElement("canvas");
