@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Light Receiver</title>
+</head>
+<body>
+
+<h2>📷 Light Receiver</h2>
+<video id="video" autoplay></video>
+<p id="output">Waiting...</p>
+
+<script>
+let video = document.getElementById("video");
+let output = document.getElementById("output");
+
+navigator.mediaDevices.getUserMedia({ video: true })
+  .then(stream => video.srcObject = stream);
+
+let canvas = document.createElement("canvas");
+let ctx = canvas.getContext("2d");
+
+let data = "";
+
+setInterval(() => {
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  ctx.drawImage(video, 0, 0);
+
+  let frame = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+
+  let brightness = 0;
+  for (let i = 0; i < frame.length; i += 4) {
+    brightness += frame[i]; // red channel
+  }
+
+  brightness /= (frame.length / 4);
+
+  if (brightness > 100) {
+    data += "1";
+  } else {
+    data += "0";
+  }
+
+  // every 8 bits → convert to char
+  if (data.length >= 8) {
+    let byte = data.slice(0, 8);
+    data = data.slice(8);
+
+    let char = String.fromCharCode(parseInt(byte, 2));
+    output.innerText += char;
+  }
+
+}, 200);
+</script>
+
+</body>
+</html>

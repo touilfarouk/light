@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Light Sender</title>
+  <style>
+    body {
+      text-align: center;
+      background: black;
+      color: white;
+      font-family: Arial;
+    }
+    #flash {
+      width: 200px;
+      height: 200px;
+      margin: 20px auto;
+      background: black;
+      border: 2px solid white;
+    }
+  </style>
+</head>
+<body>
+
+<h2>💡 Light Sender</h2>
+<input id="text" placeholder="Enter message">
+<button onclick="send()">Send</button>
+
+<div id="flash"></div>
+
+<script>
+function textToBinary(text) {
+  return text.split('').map(c =>
+    c.charCodeAt(0).toString(2).padStart(8,'0')
+  ).join('');
+}
+
+async function send() {
+  let text = document.getElementById("text").value;
+  let binary = textToBinary(text);
+
+  for (let bit of binary) {
+    if (bit === "1") {
+      flash(true);
+    } else {
+      flash(false);
+    }
+    await sleep(200);
+  }
+}
+
+function flash(on) {
+  document.getElementById("flash").style.background = on ? "white" : "black";
+}
+
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+</script>
+
+</body>
+</html>
