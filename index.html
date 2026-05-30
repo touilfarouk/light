@@ -13,13 +13,20 @@
 let video = document.getElementById("video");
 let output = document.getElementById("output");
 
-navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } })
-  .then(stream => video.srcObject = stream)
-  .catch(() => {
-    // Fallback if exact back camera not available
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-      .then(stream => video.srcObject = stream);
-  });
+navigator.mediaDevices.enumerateDevices().then(devices => {
+  const backCamera = devices.find(device => 
+    device.kind === 'videoinput' && device.label.toLowerCase().includes('back')
+  );
+  const cameraConstraints = backCamera
+    ? { video: { deviceId: { exact: backCamera.deviceId } } }
+    : { video: { facingMode: { ideal: 'environment' } } };
+  return navigator.mediaDevices.getUserMedia(cameraConstraints);
+}).then(stream => video.srcObject = stream)
+.catch(error => {
+  console.log('Camera error:', error);
+  navigator.mediaDevices.getUserMedia({ video: true })
+    .then(stream => video.srcObject = stream);
+});
 
 let canvas = document.createElement("canvas");
 let ctx = canvas.getContext("2d");
